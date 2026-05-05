@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Controle de Gastos</title>
+  <link rel="manifest" href="manifest.json" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, sans-serif; background: #0f172a; color: #e5e7eb; }
+    .app { max-width: 1100px; margin: auto; padding: 16px; }
+    .topo { display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; }
+    h1 { margin: 10px 0; font-size: 28px; }
+    .status { font-size: 13px; padding: 8px 12px; border-radius: 999px; background: #1e293b; }
+    .tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 16px 0; }
+    .tabs button, button { border: 0; border-radius: 12px; padding: 12px; background: #2563eb; color: white; font-weight: bold; cursor: pointer; }
+    .tabs button.active { background: #22c55e; color: #052e16; }
+    .box { background: #111827; border: 1px solid #334155; padding: 16px; border-radius: 18px; margin-bottom: 14px; box-shadow: 0 12px 30px rgba(0,0,0,.22); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+    .card { background: #1e293b; border: 1px solid #334155; padding: 16px; border-radius: 16px; }
+    .card span { color: #94a3b8; font-size: 14px; }
+    .card strong { display: block; font-size: 24px; margin-top: 8px; }
+    input, select { width: 100%; padding: 12px; margin-top: 8px; border-radius: 12px; border: 1px solid #475569; background: #020617; color: white; font-size: 16px; }
+    label { color: #cbd5e1; font-size: 14px; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; align-items: end; }
+    .lista { display: grid; gap: 10px; }
+    .item { background: #020617; border: 1px solid #334155; padding: 12px; border-radius: 14px; display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
+    .item small { color: #94a3b8; }
+    .danger { background: #dc2626; }
+    .muted { color: #94a3b8; }
+    .positivo { color: #22c55e; }
+    .negativo { color: #ef4444; }
+    .hidden { display: none; }
+    canvas { max-height: 320px; }
+    @media (max-width: 700px) { .tabs { grid-template-columns: 1fr 1fr; } .item { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="topo">
+    <h1>💰 Controle de Gastos</h1>
+    <div id="status" class="status">Conectando...</div>
+  </div>
+
+  <div class="box">
+    <div class="form-grid">
+      <div>
+        <label>Filtrar mês</label>
+        <input type="month" id="filtroMes" onchange="carregarTudo()" />
+      </div>
+      <div>
+        <label>Meta máxima de gastos no mês</label>
+        <input type="number" id="meta" placeholder="Ex: 2500" />
+      </div>
+      <button onclick="salvarMeta()">Salvar meta</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card"><span>Total de ganhos</span><strong id="totalGanhos">R$ 0,00</strong></div>
+    <div class="card"><span>Total de gastos</span><strong id="totalGastos">R$ 0,00</strong></div>
+    <div class="card"><span>Saldo do mês</span><strong id="saldoMes">R$ 0,00</strong></div>
+    <div class="card"><span>Total investido</span><strong id="totalInvestido">R$ 0,00</strong></div>
+  </div>
+
+  <div id="alerta" class="box hidden"></div>
+
+  <div class="tabs">
+    <button class="active" onclick="abrirAba('inicio', this)">Início</button>
+    <button onclick="abrirAba('ganhos', this)">Ganhos</button>
+    <button onclick="abrirAba('gastos', this)">Gastos</button>
+    <button onclick="abrirAba('investimentos', this)">Poupança</button>
+    <button onclick="abrirAba('backup', this)">Backup</button>
+  </div>
+
+  <section id="aba-inicio" class="aba box">
+    <h2>Resumo</h2>
+    <p class="muted">Seu resumo do mês selecionado.</p>
+    <canvas id="graficoCategorias"></canvas>
+  </section>
+
+  <section id="aba-ganhos" class="aba box hidden">
+    <h2>Adicionar ganho</h2>
+    <div class="form-grid">
+      <input type="date" id="ganhoData" />
+      <input type="text" id="ganhoDescricao" placeholder="Descrição. Ex: Salário" />
+      <input type="number" id="ganhoValor" placeholder="Valor" />
+      <select id="ganhoTipo"><option>Salário</option><option>Hora extra</option><option>Bico</option><option>Comissão</option><option>Vale</option><option>Outros</option></select>
+      <button onclick="adicionar('ganhos')">Adicionar ganho</button>
+    </div>
+    <h3>Ganhos cadastrados</h3><div id="listaGanhos" class="lista"></div>
+  </section>
+
+  <section id="aba-gastos" class="aba box hidden">
+    <h2>Adicionar gasto</h2>
+    <div class="form-grid">
+      <input type="date" id="gastoData" />
+      <input type="text" id="gastoDescricao" placeholder="Descrição. Ex: Mercado" />
+      <input type="number" id="gastoValor" placeholder="Valor" />
+      <select id="gastoCategoria"><option>Mercado</option><option>Casa</option><option>Transporte</option><option>Saúde</option><option>Lazer</option><option>Contas</option><option>Cartão</option><option>Outros</option></select>
+      <button onclick="adicionar('gastos')">Adicionar gasto</button>
+    </div>
+    <h3>Gastos cadastrados</h3><div id="listaGastos" class="lista"></div>
+  </section>
+
+  <section id="aba-investimentos" class="aba box hidden">
+    <h2>Investimentos / Poupança</h2>
+    <div class="form-grid">
+      <input type="date" id="investData" />
+      <input type="text" id="investDescricao" placeholder="Descrição. Ex: Reserva emergência" />
+      <input type="number" id="investValor" placeholder="Valor guardado" />
+      <select id="investTipo"><option>Poupança</option><option>Reserva de emergência</option><option>CDB</option><option>Tesouro Direto</option><option>Caixinha</option><option>Outros</option></select>
+      <input type="text" id="investObjetivo" placeholder="Objetivo. Ex: trocar de carro" />
+      <button onclick="adicionar('investimentos')">Adicionar investimento</button>
+    </div>
+    <h3>Investimentos cadastrados</h3><div id="listaInvestimentos" class="lista"></div>
+  </section>
+
+  <section id="aba-backup" class="aba box hidden">
+    <h2>Backup e exportação</h2>
+    <div class="form-grid">
+      <button onclick="exportarJSON()">Baixar backup JSON</button>
+      <button onclick="exportarCSV()">Exportar CSV</button>
+      <input type="file" id="arquivoBackup" accept="application/json" />
+      <button onclick="importarJSON()">Importar backup</button>
+    </div>
+  </section>
+</div>
+
+<script>
+let ganhos = [], gastos = [], investimentos = [], meta = 0, chart = null;
+const hoje = new Date().toISOString().slice(0,10);
+document.getElementById('ganhoData').value = hoje;
+document.getElementById('gastoData').value = hoje;
+document.getElementById('investData').value = hoje;
+document.getElementById('filtroMes').value = hoje.slice(0,7);
+
+function dinheiro(v) { return 'R$ ' + Number(v || 0).toFixed(2).replace('.', ','); }
+function mesSelecionado() { return document.getElementById('filtroMes').value; }
+function filtrarMes(arr) { const mes = mesSelecionado(); return arr.filter(x => String(x.data).startsWith(mes)); }
+function setStatus(txt) { document.getElementById('status').innerText = txt; }
+
+async function testarConexao() {
+  if (SUPABASE_URL.includes('COLE_') || SUPABASE_ANON_KEY.includes('COLE_')) {
+    setStatus('Configure o supabase-config.js'); return false;
+  }
+  setStatus('Conectado ao Supabase'); return true;
+}
+
+async function carregarTudo() {
+  if (!await testarConexao()) return;
+  const [g1,g2,g3,cfg] = await Promise.all([
+    supabaseClient.from('ganhos').select('*').order('data', { ascending: false }),
+    supabaseClient.from('gastos').select('*').order('data', { ascending: false }),
+    supabaseClient.from('investimentos').select('*').order('data', { ascending: false }),
+    supabaseClient.from('configuracoes').select('*').eq('chave','meta').maybeSingle()
+  ]);
+  if (g1.error || g2.error || g3.error) { alert('Erro ao carregar. Confira se você executou o schema.sql no Supabase.'); return; }
+  ganhos = g1.data || []; gastos = g2.data || []; investimentos = g3.data || [];
+  meta = cfg.data ? Number(cfg.data.valor) : 0;
+  document.getElementById('meta').value = meta || '';
+  renderizar();
+}
+
+async function salvarMeta() {
+  meta = Number(document.getElementById('meta').value || 0);
+  const { error } = await supabaseClient.from('configuracoes').upsert({ chave: 'meta', valor: String(meta), atualizado_em: new Date().toISOString() }, { onConflict: 'chave' });
+  if (error) { alert('Erro ao salvar meta.'); return; }
+  carregarTudo();
+}
+
+async function adicionar(tipo) {
+  let dados;
+  if (tipo === 'ganhos') dados = { data: ganhoData.value, descricao: ganhoDescricao.value.trim(), valor: Number(ganhoValor.value), tipo: ganhoTipo.value };
+  if (tipo === 'gastos') dados = { data: gastoData.value, descricao: gastoDescricao.value.trim(), valor: Number(gastoValor.value), categoria: gastoCategoria.value };
+  if (tipo === 'investimentos') dados = { data: investData.value, descricao: investDescricao.value.trim(), valor: Number(investValor.value), tipo: investTipo.value, objetivo: investObjetivo.value.trim() };
+  if (!dados.data || !dados.descricao || !dados.valor || dados.valor <= 0) { alert('Preencha data, descrição e valor.'); return; }
+  const { error } = await supabaseClient.from(tipo).insert([dados]);
+  if (error) { alert('Erro ao salvar: ' + error.message); return; }
+  ['ganhoDescricao','ganhoValor','gastoDescricao','gastoValor','investDescricao','investValor','investObjetivo'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  carregarTudo();
+}
+
+async function excluir(tipo, id) {
+  if (!confirm('Excluir este item?')) return;
+  const { error } = await supabaseClient.from(tipo).delete().eq('id', id);
+  if (error) { alert('Erro ao excluir.'); return; }
+  carregarTudo();
+}
+
+function renderizar() {
+  const gm = filtrarMes(ganhos), gt = filtrarMes(gastos), im = filtrarMes(investimentos);
+  const totalGanhos = gm.reduce((s,x)=>s+Number(x.valor),0);
+  const totalGastos = gt.reduce((s,x)=>s+Number(x.valor),0);
+  const totalInvestidoMes = im.reduce((s,x)=>s+Number(x.valor),0);
+  const totalInvestidoGeral = investimentos.reduce((s,x)=>s+Number(x.valor),0);
+  const saldo = totalGanhos - totalGastos - totalInvestidoMes;
+  totalGanhosEl = document.getElementById('totalGanhos'); totalGanhosEl.innerText = dinheiro(totalGanhos);
+  document.getElementById('totalGastos').innerText = dinheiro(totalGastos);
+  const saldoEl = document.getElementById('saldoMes'); saldoEl.innerText = dinheiro(saldo); saldoEl.className = saldo >= 0 ? 'positivo' : 'negativo';
+  document.getElementById('totalInvestido').innerText = dinheiro(totalInvestidoGeral);
+  renderLista('listaGanhos', gm, 'ganhos', x => `${x.tipo} • ${x.data}`);
+  renderLista('listaGastos', gt, 'gastos', x => `${x.categoria} • ${x.data}`);
+  renderLista('listaInvestimentos', im, 'investimentos', x => `${x.tipo} • ${x.objetivo || 'Sem objetivo'} • ${x.data}`);
+  renderAlerta(totalGastos);
+  renderGrafico(gt);
+}
+
+function renderLista(id, arr, tabela, sub) {
+  const el = document.getElementById(id); el.innerHTML = '';
+  if (!arr.length) { el.innerHTML = '<p class="muted">Nenhum item cadastrado neste mês.</p>'; return; }
+  arr.forEach(x => {
+    const div = document.createElement('div'); div.className = 'item';
+    div.innerHTML = `<div><strong>${x.descricao}</strong><br><small>${sub(x)}</small><br><strong>${dinheiro(x.valor)}</strong></div><button class="danger" onclick="excluir('${tabela}', ${x.id})">Excluir</button>`;
+    el.appendChild(div);
+  });
+}
+
+function renderAlerta(totalGastos) {
+  const el = document.getElementById('alerta');
+  if (!meta) { el.className = 'box hidden'; return; }
+  const perc = totalGastos / meta * 100;
+  if (perc >= 100) { el.className = 'box'; el.innerHTML = `🚨 Você passou da meta de gastos. Meta: <strong>${dinheiro(meta)}</strong>`; }
+  else if (perc >= 80) { el.className = 'box'; el.innerHTML = `⚠️ Atenção: você já usou ${perc.toFixed(0)}% da meta de gastos.`; }
+  else { el.className = 'box hidden'; }
+}
+
+function renderGrafico(arr) {
+  const categorias = {};
+  arr.forEach(x => categorias[x.categoria] = (categorias[x.categoria] || 0) + Number(x.valor));
+  const labels = Object.keys(categorias), dados = Object.values(categorias);
+  const ctx = document.getElementById('graficoCategorias');
+  if (chart) chart.destroy();
+  chart = new Chart(ctx, { type: 'doughnut', data: { labels, datasets: [{ data: dados }] }, options: { plugins: { legend: { labels: { color: '#e5e7eb' } } } } });
+}
+
+function abrirAba(nome, btn) {
+  document.querySelectorAll('.aba').forEach(a => a.classList.add('hidden'));
+  document.getElementById('aba-' + nome).classList.remove('hidden');
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function exportarJSON() {
+  baixar('backup-controle-gastos.json', JSON.stringify({ ganhos, gastos, investimentos, meta }, null, 2), 'application/json');
+}
+function exportarCSV() {
+  const linhas = ['tipo,descricao,valor,data,categoria_ou_tipo,objetivo'];
+  ganhos.forEach(x => linhas.push(`ganho,"${x.descricao}",${x.valor},${x.data},"${x.tipo}",`));
+  gastos.forEach(x => linhas.push(`gasto,"${x.descricao}",${x.valor},${x.data},"${x.categoria}",`));
+  investimentos.forEach(x => linhas.push(`investimento,"${x.descricao}",${x.valor},${x.data},"${x.tipo}","${x.objetivo || ''}"`));
+  baixar('controle-gastos.csv', linhas.join('\n'), 'text/csv');
+}
+function baixar(nome, conteudo, tipo) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([conteudo], {type: tipo})); a.download = nome; a.click();
+}
+async function importarJSON() {
+  const arq = document.getElementById('arquivoBackup').files[0]; if (!arq) { alert('Selecione um arquivo JSON.'); return; }
+  const dados = JSON.parse(await arq.text());
+  if (dados.ganhos?.length) await supabaseClient.from('ganhos').insert(dados.ganhos.map(({id, criado_em, ...x}) => x));
+  if (dados.gastos?.length) await supabaseClient.from('gastos').insert(dados.gastos.map(({id, criado_em, ...x}) => x));
+  if (dados.investimentos?.length) await supabaseClient.from('investimentos').insert(dados.investimentos.map(({id, criado_em, ...x}) => x));
+  if (dados.meta) await supabaseClient.from('configuracoes').upsert({ chave: 'meta', valor: String(dados.meta) }, { onConflict: 'chave' });
+  carregarTudo();
+}
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js');
+carregarTudo();
+</script>
+</body>
+</html>

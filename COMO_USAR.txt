@@ -1,0 +1,47 @@
+CONTROLE DE GASTOS - VERSÃO SUPABASE
+
+1) CRIAR CONTA NO SUPABASE
+Acesse https://supabase.com
+Clique em New Project
+Nome: controle-gastos
+Crie uma senha e aguarde o projeto ficar pronto.
+
+2) CRIAR AS TABELAS
+No Supabase, vá em SQL Editor.
+Clique em New query.
+Abra o arquivo schema.sql desta pasta.
+Copie tudo, cole no SQL Editor e clique em Run.
+
+3) PEGAR URL E CHAVE
+No Supabase, vá em Project Settings > API.
+Copie:
+- Project URL
+- anon public key
+
+4) COLAR NO APP
+Abra o arquivo supabase-config.js no Bloco de Notas.
+Cole seus dados assim:
+
+const SUPABASE_URL = "SUA_URL";
+const SUPABASE_ANON_KEY = "SUA_CHAVE_ANON_PUBLIC";
+
+Salve o arquivo.
+
+5) TESTAR NO COMPUTADOR
+Abra o index.html no navegador.
+Se aparecer "Conectado ao Supabase", está certo.
+
+6) PUBLICAR NA NUVEM
+Você pode publicar no Netlify:
+- Acesse https://netlify.com
+- Add new site
+- Deploy manually
+- Arraste esta pasta inteira
+
+7) USAR NO CELULAR
+Depois de publicar no Netlify, abra o link no Chrome do celular.
+Toque nos três pontinhos > Adicionar à tela inicial.
+
+IMPORTANTE
+Esta versão é para uso pessoal simples.
+Não compartilhe o link com outras pessoas, pois os dados usam uma chave pública do seu projeto.

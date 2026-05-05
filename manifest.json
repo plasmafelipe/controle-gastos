@@ -1,0 +1,10 @@
+{
+  "name": "Controle de Gastos Supabase",
+  "short_name": "Gastos",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
+  "description": "App de controle de ganhos, gastos e investimentos com Supabase",
+  "icons": []
+}
