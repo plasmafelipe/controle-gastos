@@ -133,7 +133,7 @@
 
     .grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       gap: 12px;
       margin-bottom: 14px;
     }
@@ -179,6 +179,7 @@
     .item.ganho { border-left-color: var(--verde); }
     .item.gasto { border-left-color: var(--vermelho); }
     .item.investimento { border-left-color: var(--laranja); }
+    .item.pago { border-left-color: var(--verde); background: #f0fdf4; }
 
     .item-top {
       display: flex;
@@ -298,11 +299,15 @@
       <div id="totalGanhos" class="valor verde">R$ 0,00</div>
     </div>
     <div class="card">
-      <h3>Gastos do mês</h3>
+      <h3>Gastos pendentes</h3>
       <div id="totalGastos" class="valor vermelho">R$ 0,00</div>
     </div>
     <div class="card">
-      <h3>Saldo do mês</h3>
+      <h3>Total já pago</h3>
+      <div id="totalPago" class="valor verde">R$ 0,00</div>
+    </div>
+    <div class="card">
+      <h3>Saldo disponível</h3>
       <div id="saldoMes" class="valor azul">R$ 0,00</div>
     </div>
     <div class="card">
@@ -317,17 +322,17 @@
     <label>Mês</label>
     <input type="month" id="mesFiltro" onchange="atualizarTudo()" />
 
-    <label>Meta máxima de gastos no mês</label>
+    <label>Meta máxima de gastos pendentes no mês</label>
     <input type="number" id="metaGastos" placeholder="Ex: 2500" />
     <button class="primary" onclick="salvarMeta()">Salvar meta</button>
 
     <div class="card" style="margin-top:12px;">
-      <h3>Uso da meta de gastos</h3>
+      <h3>Uso da meta de gastos pendentes</h3>
       <div class="progress"><div id="barraMeta" class="bar"></div></div>
       <p id="textoMeta" class="small">Nenhuma meta definida.</p>
     </div>
 
-    <h3>Gráfico por categoria de gastos</h3>
+    <h3>Gráfico por categoria de gastos pendentes</h3>
     <canvas id="grafico" width="900" height="300"></canvas>
 
     <div class="actions">
@@ -366,7 +371,7 @@
   </section>
 
   <section id="gastos" class="section">
-    <h2>Adicionar gasto</h2>
+    <h2>Adicionar gasto / conta</h2>
     <div class="form-grid">
       <div>
         <label>Data</label>
@@ -378,7 +383,7 @@
       </div>
     </div>
     <label>Descrição</label>
-    <input type="text" id="gastoDescricao" placeholder="Ex: mercado, luz, gasolina" />
+    <input type="text" id="gastoDescricao" placeholder="Ex: conta de luz, mercado, internet" />
     <label>Categoria</label>
     <select id="gastoTipo">
       <option>Mercado</option>
@@ -389,6 +394,11 @@
       <option>Contas</option>
       <option>Cartão</option>
       <option>Outros</option>
+    </select>
+    <label>Status</label>
+    <select id="gastoStatus">
+      <option value="pendente">Pendente</option>
+      <option value="pago">Pago</option>
     </select>
     <button class="danger" onclick="adicionar('gastos')">Salvar gasto</button>
     <h3>Lista de gastos</h3>
@@ -553,13 +563,19 @@
       return;
     }
 
-    const { error } = await supa.from(tipo).insert({
+    let registro = {
       user_id: usuario.id,
       data,
       descricao,
       valor,
       categoria
-    });
+    };
+
+    if (tipo === "gastos") {
+      registro.status = document.getElementById("gastoStatus").value;
+    }
+
+    const { error } = await supa.from(tipo).insert(registro);
 
     if (error) {
       alert("Erro ao salvar: " + error.message);
@@ -568,6 +584,19 @@
 
     document.getElementById(prefixo + "Descricao").value = "";
     document.getElementById(prefixo + "Valor").value = "";
+    if (tipo === "gastos") document.getElementById("gastoStatus").value = "pendente";
+
+    await carregarDados();
+  }
+
+  async function alterarStatusGasto(id, statusAtual) {
+    const novoStatus = statusAtual === "pago" ? "pendente" : "pago";
+    const { error } = await supa.from("gastos").update({ status: novoStatus }).eq("id", id);
+
+    if (error) {
+      alert("Erro ao alterar status: " + error.message);
+      return;
+    }
 
     await carregarDados();
   }
@@ -617,14 +646,19 @@
     const gastosMes = filtrarMes(dados.gastos);
     const investimentosMes = filtrarMes(dados.investimentos);
 
+    const gastosPendentes = gastosMes.filter(g => (g.status || "pendente") !== "pago");
+    const gastosPagos = gastosMes.filter(g => (g.status || "pendente") === "pago");
+
     const totalGanhos = soma(ganhosMes);
-    const totalGastos = soma(gastosMes);
+    const totalPendentes = soma(gastosPendentes);
+    const totalPagos = soma(gastosPagos);
     const totalInvestidoMes = soma(investimentosMes);
     const totalInvestidoGeral = soma(dados.investimentos);
-    const saldo = totalGanhos - totalGastos - totalInvestidoMes;
+    const saldo = totalGanhos - totalPagos - totalInvestidoMes;
 
     document.getElementById("totalGanhos").innerText = dinheiro(totalGanhos);
-    document.getElementById("totalGastos").innerText = dinheiro(totalGastos);
+    document.getElementById("totalGastos").innerText = dinheiro(totalPendentes);
+    document.getElementById("totalPago").innerText = dinheiro(totalPagos);
     document.getElementById("saldoMes").innerText = dinheiro(saldo);
     document.getElementById("saldoMes").className = "valor " + (saldo >= 0 ? "verde" : "vermelho");
     document.getElementById("totalInvestido").innerText = dinheiro(totalInvestidoGeral);
@@ -633,8 +667,8 @@
     renderLista("listaGastos", "gastos", gastosMes, "gasto");
     renderLista("listaInvestimentos", "investimentos", investimentosMes, "investimento");
 
-    atualizarMeta(totalGastos);
-    desenharGrafico(gastosMes);
+    atualizarMeta(totalPendentes);
+    desenharGrafico(gastosPendentes);
   }
 
   function renderLista(id, tipo, lista, classe) {
@@ -647,18 +681,28 @@
 
     el.innerHTML = lista
       .sort((a,b) => new Date(b.data) - new Date(a.data))
-      .map(i => `
-        <div class="item ${classe}">
-          <div class="item-top">
-            <div>
-              <strong>${i.descricao}</strong>
-              <div class="small">${i.categoria} • ${formatarData(i.data)}</div>
+      .map(i => {
+        const status = tipo === "gastos" ? (i.status || "pendente") : "";
+        const statusTexto = status === "pago" ? "✅ Pago" : "⏳ Pendente";
+        const classeExtra = tipo === "gastos" && status === "pago" ? " pago" : "";
+        const botaoStatus = tipo === "gastos"
+          ? `<button class="${status === "pago" ? "warning" : "success"} mini-btn" onclick="alterarStatusGasto('${i.id}', '${status}')">${status === "pago" ? "Marcar pendente" : "Marcar como pago"}</button>`
+          : "";
+
+        return `
+          <div class="item ${classe}${classeExtra}">
+            <div class="item-top">
+              <div>
+                <strong>${i.descricao}</strong>
+                <div class="small">${i.categoria} • ${formatarData(i.data)} ${tipo === "gastos" ? "• " + statusTexto : ""}</div>
+              </div>
+              <strong>${dinheiro(i.valor)}</strong>
             </div>
-            <strong>${dinheiro(i.valor)}</strong>
+            ${botaoStatus}
+            <button class="danger mini-btn" onclick="excluir('${tipo}', '${i.id}')">Excluir</button>
           </div>
-          <button class="danger mini-btn" onclick="excluir('${tipo}', '${i.id}')">Excluir</button>
-        </div>
-      `).join("");
+        `;
+      }).join("");
   }
 
   function formatarData(data) {
@@ -685,17 +729,17 @@
 
     if (totalGastos > meta) {
       barra.style.background = "var(--vermelho)";
-      texto.innerText = `Você passou da meta. Gastou ${dinheiro(totalGastos)} de ${dinheiro(meta)}.`;
+      texto.innerText = `Você passou da meta de pendentes. Falta pagar ${dinheiro(totalGastos)} de ${dinheiro(meta)}.`;
       alerta.style.display = "block";
-      alerta.innerText = "⚠️ Atenção: você ultrapassou sua meta de gastos do mês.";
+      alerta.innerText = "⚠️ Atenção: seus gastos pendentes ultrapassaram a meta.";
     } else if (perc >= 80) {
       barra.style.background = "var(--laranja)";
-      texto.innerText = `Cuidado: você já usou ${perc.toFixed(0)}% da meta.`;
+      texto.innerText = `Cuidado: você já usou ${perc.toFixed(0)}% da meta de pendentes.`;
       alerta.style.display = "block";
-      alerta.innerText = "⚠️ Você está perto de atingir sua meta de gastos.";
+      alerta.innerText = "⚠️ Você está perto de atingir sua meta de gastos pendentes.";
     } else {
       barra.style.background = "var(--azul)";
-      texto.innerText = `Você usou ${perc.toFixed(0)}% da meta.`;
+      texto.innerText = `Você usou ${perc.toFixed(0)}% da meta de gastos pendentes.`;
     }
   }
 
@@ -712,7 +756,7 @@
     if (entradas.length === 0) {
       ctx.fillStyle = "#6b7280";
       ctx.font = "22px Arial";
-      ctx.fillText("Sem gastos para mostrar no gráfico.", 25, 60);
+      ctx.fillText("Sem gastos pendentes para mostrar no gráfico.", 25, 60);
       return;
     }
 
@@ -741,11 +785,11 @@
   }
 
   function exportarCSV() {
-    const linhas = [["Tipo","Data","Descrição","Categoria","Valor"]];
+    const linhas = [["Tipo","Data","Descrição","Categoria","Status","Valor"]];
 
     ["ganhos","gastos","investimentos"].forEach(tipo => {
       dados[tipo].forEach(i => {
-        linhas.push([tipo, i.data, i.descricao, i.categoria, i.valor]);
+        linhas.push([tipo, i.data, i.descricao, i.categoria, i.status || "", i.valor]);
       });
     });
 

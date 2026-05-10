@@ -1,4 +1,4 @@
-const CACHE_NAME = "controle-gastos-cloud-v1";
+const CACHE_NAME = "controle-gastos-cloud-conta-paga-v2";
 const FILES = ["./", "./index.html", "./manifest.json", "./icon.svg", "./supabase-config.js"];
 
 self.addEventListener("install", event => {

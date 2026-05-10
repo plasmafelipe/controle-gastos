@@ -1,62 +1,22 @@
-COMO USAR - CONTROLE DE GASTOS CLOUD COM SUPABASE
+ATUALIZAÇÃO - CONTA PAGA
 
-PASSO 1 - CRIAR PROJETO NO SUPABASE
-1. Acesse supabase.com
-2. Crie um projeto novo
-3. Aguarde o projeto ficar pronto
+O que mudou:
+- Gastos agora têm status: Pendente ou Pago.
+- Quando marcar como Pago, o valor sai de Gastos pendentes.
+- O valor entra no novo quadrado Total já pago.
+- O saldo disponível considera: Ganhos - Total já pago - Investimentos do mês.
 
-PASSO 2 - CRIAR AS TABELAS
-1. No menu lateral, clique em SQL Editor
-2. Clique em New query
-3. Abra o arquivo schema.sql deste ZIP
-4. Copie tudo
-5. Cole no SQL Editor
-6. Clique em Run
+PASSO 1:
+No Supabase, abra SQL Editor > New query.
 
-PASSO 3 - ATIVAR LOGIN COM EMAIL
-1. Vá em Authentication
-2. Vá em Providers
-3. Ative Email
-4. Salve
+PASSO 2:
+Abra o arquivo schema.sql deste ZIP, copie tudo e execute em Run.
 
-DICA:
-Se quiser facilitar o primeiro teste, em Authentication > Providers > Email,
-desative a confirmação de e-mail, caso apareça essa opção.
+PASSO 3:
+Antes de enviar ao GitHub, confira o arquivo supabase-config.js com sua URL e Publishable key.
 
-PASSO 4 - PEGAR URL E CHAVE
-1. Vá em Project Settings
-2. Clique em API
-3. Copie:
-   - Project URL
-   - anon public key
+PASSO 4:
+Envie todos os arquivos para o GitHub Pages substituindo os antigos.
 
-PASSO 5 - CONFIGURAR O APP
-1. Abra o arquivo supabase-config.js
-2. Cole os dados assim:
-
-const SUPABASE_URL = "SUA_PROJECT_URL";
-const SUPABASE_ANON_KEY = "SUA_ANON_PUBLIC_KEY";
-
-3. Salve o arquivo
-
-PASSO 6 - SUBIR NO GITHUB PAGES
-1. Envie todos os arquivos deste ZIP para o seu repositório:
-   - index.html
-   - supabase-config.js
-   - schema.sql
-   - manifest.json
-   - service-worker.js
-   - icon.svg
-   - COMO_USAR.txt
-
-2. Aguarde o GitHub Pages atualizar
-
-PASSO 7 - TESTAR
-1. Abra o link do seu app
-2. Crie uma conta
-3. Entre
-4. Cadastre ganho, gasto ou investimento
-
-IMPORTANTE:
-Esta versão salva na nuvem.
-Você pode acessar do celular e computador usando o mesmo e-mail e senha.
+PASSO 5:
+No celular, limpe cache ou remova o atalho antigo e abra novamente o link.

@@ -1,4 +1,4 @@
--- CONTROLE DE GASTOS CLOUD - SUPABASE
+-- ATUALIZAÇÃO: função de CONTA PAGA
 -- Execute tudo no Supabase em: SQL Editor > New query > Run
 
 create extension if not exists "pgcrypto";
@@ -10,6 +10,7 @@ create table if not exists ganhos (
   descricao text not null,
   valor numeric(12,2) not null,
   categoria text not null,
+  status text not null default 'pendente',
   created_at timestamptz default now()
 );
 
@@ -41,6 +42,8 @@ create table if not exists metas (
   created_at timestamptz default now(),
   unique(user_id, mes)
 );
+
+alter table gastos add column if not exists status text not null default 'pendente';
 
 alter table ganhos enable row level security;
 alter table gastos enable row level security;
