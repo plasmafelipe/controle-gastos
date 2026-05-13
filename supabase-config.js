@@ -1,2 +1,2 @@
 const SUPABASE_URL = "https://qdglqfjhncjmkfoowqxu.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_o17TPoqjrd-IkZ3lShf21g_hv2SBxQh";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFkZ2xxZmpobmNqbWtmb293cXh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMTY5MjMsImV4cCI6MjA5MzU5MjkyM30.NuY2hrgT2KuLTtNsk3pYxNE_QCPU-nOUDmeC5wSBYeI";
